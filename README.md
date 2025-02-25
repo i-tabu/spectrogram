@@ -12,3 +12,4 @@ Add more status
 5. falsetto (new)
 6. non-human (new)
 
+Make Mobile friendly (may remove other non-required options)
