@@ -15,31 +15,37 @@
     </style>
 </head>
 <body class="container py-1"> 
-    <h1 class="text-center"> Spectrogram </h1>
+    <h1 class="text-center"> Spectrogram</h1>
+    <p class="text-center"> For TransWomen Voice Practice</p>
     <div id="controls" class="row">
-            <div class="col-9" >
+            <div class="col-12">
                 <div class="row">
                     <div class="col-12">
                         <button id="startButton" class="btn btn-danger mb-2 w-100" style="font-size:32px;">START ▷</button>
                     </div>
                 </div>
-
                 <div class="row">
-                    <div class="col-12">
-                        <canvas id="spectrogramCanvas" width="800" height="400" style="border:1px solid #ccc;"></canvas>
+                    <div class="col-12" style="border:1px solid #ccc;">
+                        <canvas id="spectrogramCanvas"  style="width:100%; height: 400px;"></canvas>
                     </div>
                 </div>
                 
             </div>
-            <div class="col-3">
+            <!-- div class="col-3">
+                <div class="form-control m-2">
+                    <label for="minDecibels" class="form-label">Min Decibels</label>
+                    <input type="number" id="minDecibel" class="form-control" value="-90">
+                </div>
+            </div -->
+            <!-- div class="col-3">
                     <div class="form-control m-2">
-                        <label for="minDecibel" class="form-label">Min Decibel</label>
+                        <label for="minDecibels" class="form-label">Min Decibels</label>
                         <input type="number" id="minDecibel" class="form-control" value="-90">
                     </div>
                 
                     <div class="form-control  m-2">
-                        <label for="maxDecibel" class="form-label">Max Decibel</label>
-                        <input type="number" id="maxDecibel" class="form-control" value="-10">
+                        <label for="maxDecibels" class="form-label">Max Decibels</label>
+                        <input type="number" id="maxDecibels" class="form-control" value="-10">
                     </div>
                 
                     <div class="form-control  m-2">
@@ -56,7 +62,7 @@
                         <label for="numBars" class="form-label">Bars per Frequency</label>
                         <input type="number" id="numBars" class="form-control" value="1" min="1">
                     </div>        
-            </div>
+            </div -->
     </div>
 
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
@@ -67,6 +73,10 @@
 
         const canvas = document.getElementById('spectrogramCanvas');
         const ctx = canvas.getContext('2d');
+        // Match the canvas drawing surface with its CSS size
+        canvas.width = canvas.clientWidth;
+        canvas.height = canvas.clientHeight;
+
         const startButton = document.getElementById('startButton');
 
         let audioContext;
@@ -78,7 +88,9 @@
         let mediaStream;
 
         function updateFrequencyBands() {
-            frequencyBands = document.getElementById('freqRange').value.split(',').map(Number).sort((a, b) => a - b);
+            let freqRange = '50,63,80,100,125,160,200,250,315,400,500,630,800,1000';
+            //freqRange = document.getElementById('freqRange').value;;
+            frequencyBands = freqRange.split(',').map(Number).sort((a, b) => a - b);
         }
 
         function frequencyToIndex(frequency, sampleRate, fftSize) {
@@ -97,13 +109,25 @@
             const frequency = maxIndex * (sampleRate / fftSize);
 
             // Determine gender based on resonance frequency
-            if (frequency >= 85 && frequency <= 180) {
+            if (frequency < 85) {
+                gender = "";
+            }
+            else if (frequency >= 85 && frequency <= 180) {
                 gender = "male";
-            } else if (frequency > 180 && frequency <= 255) {
+            } 
+            else if (frequency > 180 && frequency <= 255) {
                 gender = "andro";
-            } else if (frequency > 255) {
+            } 
+            else if (frequency > 255 && frequency <= 440) {
                 gender = "female";
-            } else {
+            } 
+            else if (frequency > 440 && frequency <= 880) {
+                gender = "falsetto";
+            } 
+            else if (frequency > 880) {
+                gender = "";
+            }
+            else {
                 gender = "";
             }
 
@@ -121,7 +145,8 @@
 
             const sampleRate = audioContext.sampleRate;
             const fftSize = analyser.fftSize;
-            const numBars = parseInt(document.getElementById('numBars').value);
+            //const numBars = parseInt(document.getElementById('numBars').value);
+            const numBars = 1;
             const barWidth = canvas.width / (frequencyBands.length * numBars);
 
             for (let i = 0; i < frequencyBands.length - 1; i++) {
@@ -149,7 +174,10 @@
                 ctx.translate(i * barWidth + barWidth / 2, offset - 5);
                 ctx.rotate(-Math.PI / 2);
                 ctx.fillStyle = '#000';
-                ctx.font = '12px "Segoe UI", Arial, sans-serif';
+                // Set font size relative to canvas width
+                //const fontSize = canvas.width / 24;  // Adjust the divisor for desired sizing
+                ctx.font = '18px "Segoe UI", Arial, sans-serif';
+                //ctx.font = `${fontSize}px Arial`;
                 ctx.textAlign = 'center';
                 ctx.fillText(`${startFreq}-${endFreq}Hz`, 0, 0);
                 ctx.restore();
@@ -163,6 +191,21 @@
         }
 
         async function toggleSpectrogram() {
+
+            //configs //
+            let minDecibels = -90;
+            //minDecibels = document.getElementById('minDecibels').value;
+            minDecibels = parseFloat(minDecibels);
+
+            let maxDecibels = -10;
+            //maxDecibels = document.getElementById('maxDecibels').value;
+            maxDecibels = parseFloat(maxDecibels);
+
+            let updateSpeed = 25;//in ms
+            //updateSpeed = document.getElementById('updateSpeed').value;
+            updateSpeed = parseInt(updateSpeed);
+            
+
             if (!isRunning) {
                 updateFrequencyBands();
                 if (!audioContext) {
@@ -171,12 +214,12 @@
                     analyser.fftSize = 2048;
                 }
 
-                analyser.minDecibels = parseFloat(document.getElementById('minDecibel').value);
-                analyser.maxDecibels = parseFloat(document.getElementById('maxDecibel').value);
+                analyser.minDecibels = minDecibels;
+                analyser.maxDecibels = maxDecibels;
 
                 canvas.style.display = 'block';
 
-                const updateInterval = parseInt(document.getElementById('updateSpeed').value);
+                const updateInterval = updateSpeed;
 
                 if (animationInterval) clearInterval(animationInterval);
                 mediaStream = await navigator.mediaDevices.getUserMedia({ audio: true });
