@@ -109,10 +109,10 @@
             const frequency = maxIndex * (sampleRate / fftSize);
 
             // Determine gender based on resonance frequency
-            if (frequency < 85) {
-                gender = "";
-            }
-            else if (frequency >= 85 && frequency <= 180) {
+            //if (frequency < 85) {
+            //    gender = "";
+            //}
+            if (frequency >= 85 && frequency <= 180) {
                 gender = "male";
             } 
             else if (frequency > 180 && frequency <= 255) {
@@ -121,12 +121,12 @@
             else if (frequency > 255 && frequency <= 440) {
                 gender = "female";
             } 
-            else if (frequency > 440 && frequency <= 880) {
-                gender = "falsetto";
-            } 
-            else if (frequency > 880) {
-                gender = "";
-            }
+            //else if (frequency > 440 && frequency <= 880) {
+            //    gender = "falsetto";
+            //} 
+            //else if (frequency > 880) {
+            //    gender = "";
+            //}
             else {
                 gender = "";
             }
