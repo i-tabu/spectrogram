@@ -29,7 +29,40 @@
                         <canvas id="spectrogramCanvas"  style="width:100%; height: 400px;"></canvas>
                     </div>
                 </div>
+                
             </div>
+            <!-- div class="col-3">
+                <div class="form-control m-2">
+                    <label for="minDecibels" class="form-label">Min Decibels</label>
+                    <input type="number" id="minDecibel" class="form-control" value="-90">
+                </div>
+            </div -->
+            <!-- div class="col-3">
+                    <div class="form-control m-2">
+                        <label for="minDecibels" class="form-label">Min Decibels</label>
+                        <input type="number" id="minDecibel" class="form-control" value="-90">
+                    </div>
+                
+                    <div class="form-control  m-2">
+                        <label for="maxDecibels" class="form-label">Max Decibels</label>
+                        <input type="number" id="maxDecibels" class="form-control" value="-10">
+                    </div>
+                
+                    <div class="form-control  m-2">
+                        <label for="updateSpeed" class="form-label">Update Speed (ms)</label>
+                        <input type="number" id="updateSpeed" class="form-control" value="25" min="10">
+                    </div>
+                
+                    <div class="form-control  m-2">
+                        <label for="freqRange" class="form-label">Frequency Range (Hz, comma-separated)</label>
+                        <input type="text" id="freqRange" class="form-control" value="50,63,80,100,125,160,200,250,315,400,500,630,800,1000">
+                    </div>
+
+                    <div class="form-control  m-2">
+                        <label for="numBars" class="form-label">Bars per Frequency</label>
+                        <input type="number" id="numBars" class="form-control" value="1" min="1">
+                    </div>        
+            </div -->
     </div>
 
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
@@ -40,21 +73,23 @@
 
         const canvas = document.getElementById('spectrogramCanvas');
         const ctx = canvas.getContext('2d');
+        // Match the canvas drawing surface with its CSS size
         canvas.width = canvas.clientWidth;
         canvas.height = canvas.clientHeight;
+
         const startButton = document.getElementById('startButton');
 
         let audioContext;
         let analyser;
-        let biquadFilter;
         let frequencyBands = [];
         let animationInterval;
-        let gender = "";
-        let isRunning = false;
+        let gender = ""; // Global variable for gender classification
+        let isRunning = false; // To track spectrogram state
         let mediaStream;
 
         function updateFrequencyBands() {
             let freqRange = '50,63,80,100,125,160,200,250,315,400,500,630,800,1000';
+            //freqRange = document.getElementById('freqRange').value;;
             frequencyBands = freqRange.split(',').map(Number).sort((a, b) => a - b);
         }
 
@@ -73,13 +108,26 @@
             }
             const frequency = maxIndex * (sampleRate / fftSize);
 
+            // Determine gender based on resonance frequency
+            //if (frequency < 85) {
+            //    gender = "";
+            //}
             if (frequency >= 85 && frequency <= 180) {
                 gender = "male";
-            } else if (frequency > 180 && frequency <= 255) {
+            } 
+            else if (frequency > 180 && frequency <= 255) {
                 gender = "andro";
-            } else if (frequency > 255 && frequency <= 440) {
+            } 
+            else if (frequency > 255 && frequency <= 440) {
                 gender = "female";
-            } else {
+            } 
+            //else if (frequency > 440 && frequency <= 880) {
+            //    gender = "falsetto";
+            //} 
+            //else if (frequency > 880) {
+            //    gender = "";
+            //}
+            else {
                 gender = "";
             }
 
@@ -90,17 +138,21 @@
             const bufferLength = analyser.frequencyBinCount;
             const dataArray = new Uint8Array(bufferLength);
             analyser.getByteFrequencyData(dataArray);
+
             getResonance(dataArray, audioContext.sampleRate, analyser.fftSize);
+
             ctx.clearRect(0, 0, canvas.width, canvas.height);
 
             const sampleRate = audioContext.sampleRate;
             const fftSize = analyser.fftSize;
+            //const numBars = parseInt(document.getElementById('numBars').value);
             const numBars = 1;
             const barWidth = canvas.width / (frequencyBands.length * numBars);
 
             for (let i = 0; i < frequencyBands.length - 1; i++) {
                 const startFreq = frequencyBands[i];
                 const endFreq = frequencyBands[i + 1];
+
                 const startIndex = frequencyToIndex(startFreq, sampleRate, fftSize);
                 const endIndex = frequencyToIndex(endFreq, sampleRate, fftSize);
 
@@ -114,43 +166,72 @@
                 const percent = avgValue / 255;
                 const height = canvas.height * percent;
                 const offset = canvas.height - height;
+
                 ctx.fillStyle = `hsl(${(i / frequencyBands.length) * 360}, 100%, 50%)`;
                 ctx.fillRect(i * barWidth, offset, barWidth - 2, height);
+                
+                ctx.save();
+                ctx.translate(i * barWidth + barWidth / 2, offset - 5);
+                ctx.rotate(-Math.PI / 2);
+                ctx.fillStyle = '#000';
+                // Set font size relative to canvas width
+                //const fontSize = canvas.width / 24;  // Adjust the divisor for desired sizing
+                ctx.font = '18px "Segoe UI", Arial, sans-serif';
+                //ctx.font = `${fontSize}px Arial`;
+                ctx.textAlign = 'center';
+                ctx.fillText(`${startFreq}-${endFreq}Hz`, 0, 0);
+                ctx.restore();
             }
+
+            // Display gender on top-right corner
+            ctx.fillStyle = '#000';
+            ctx.font = '20px "Segoe UI", Arial, sans-serif';
+            ctx.textAlign = 'right';
+            ctx.fillText(`${gender}`, canvas.width - 10, 30);
         }
 
         async function toggleSpectrogram() {
+
+            //configs //
+            let minDecibels = -90;
+            //minDecibels = document.getElementById('minDecibels').value;
+            minDecibels = parseFloat(minDecibels);
+
+            let maxDecibels = -10;
+            //maxDecibels = document.getElementById('maxDecibels').value;
+            maxDecibels = parseFloat(maxDecibels);
+
+            let updateSpeed = 25;//in ms
+            //updateSpeed = document.getElementById('updateSpeed').value;
+            updateSpeed = parseInt(updateSpeed);
+            
+
             if (!isRunning) {
                 updateFrequencyBands();
                 if (!audioContext) {
                     audioContext = new (window.AudioContext || window.webkitAudioContext)();
                     analyser = audioContext.createAnalyser();
                     analyser.fftSize = 2048;
-                    
-                    // Add a high-pass filter to remove low-frequency noise
-                    biquadFilter = audioContext.createBiquadFilter();
-                    biquadFilter.type = "highpass";
-                    biquadFilter.frequency.value = 85; // Filter out noise below 85Hz
                 }
 
-                analyser.minDecibels = -90;
-                analyser.maxDecibels = -10;
+                analyser.minDecibels = minDecibels;
+                analyser.maxDecibels = maxDecibels;
+
                 canvas.style.display = 'block';
 
-                const updateInterval = 25;
+                const updateInterval = updateSpeed;
+
                 if (animationInterval) clearInterval(animationInterval);
                 mediaStream = await navigator.mediaDevices.getUserMedia({ audio: true });
                 const source = audioContext.createMediaStreamSource(mediaStream);
-                
-                // Connect the filter before the analyser
-                source.connect(biquadFilter);
-                biquadFilter.connect(analyser);
-                
+                source.connect(analyser);
                 animationInterval = setInterval(drawSpectrogram, updateInterval);
+
                 startButton.textContent = 'STOP ⏹';
                 startButton.classList.remove('btn-danger');
                 startButton.classList.add('btn-warning');
                 isRunning = true;
+
             } else {
                 clearInterval(animationInterval);
                 if (mediaStream) {
